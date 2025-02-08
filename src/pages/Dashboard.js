@@ -134,7 +134,7 @@ const Dashboard = () => {
   return (
     <Container maxWidth="lg" sx={{ paddingTop: 4 }}>
       <Button variant="contained" onClick={loginGitHub} sx={{ textAlign: 'start' }} >
-        Link GitHub
+        Link To GitHub
       </Button>
     </Container>
   );

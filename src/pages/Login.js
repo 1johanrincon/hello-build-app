@@ -7,6 +7,8 @@ const Login = () => {
   const [showError, setShowError] = useState(false)
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [messageError, setMessageError] = useState('')
+
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -21,11 +23,27 @@ const Login = () => {
 
   const saveUser = (e) => {
     e.preventDefault();
+    const isValid = validForm();
+    if (!isValid) {
+      return;
+    }
     const userLocal = { 'username': username, 'password': password }
     localStorage.setItem('user', JSON.stringify(userLocal))
     clearForm();
     setIsLogin(true)
   };
+
+  const validForm = () => {
+    if (username === '' || password === '') {
+      setMessageError('User and Password are mandatory.')
+      setShowError(true);
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+      return false;
+    }
+    return true;
+  }
 
   const login = (e) => {
     setShowError(false);
@@ -36,6 +54,7 @@ const Login = () => {
       navigate('/dashboard')
       return;
     }
+    setMessageError('Incorrect username or password, please try again.')
     setShowError(true);
     setTimeout(() => {
       setShowError(false);
@@ -56,9 +75,12 @@ const Login = () => {
         <Box sx={{ alignItems: 'center', paddingTop: 3, paddingBottom: 3 }}>
           <TextField value={username || ''} onChange={(e) => setUsername(e.target.value)} placeholder='User' type='text' sx={{ alignSelf: 'center', paddingTop: 1, paddingBottom: 1 }} required fullWidth />
           <TextField value={password || ''} onChange={(e) => setPassword(e.target.value)} placeholder='Password' type='password' sx={{ alignSelf: 'center', paddingTop: 1, paddingBottom: 1 }} required fullWidth />
-          {showError && <Typography variant='caption' align='center' sx={{ alignItems: 'center', color: 'red' }} >
-            Incorrect username or password, please try again.
-          </Typography>}
+          <Box sx={{ textAlign: 'center' }}>
+            {showError && <Typography variant='caption' align='center' sx={{ alignItems: 'center', color: 'red' }} >
+              {messageError}
+            </Typography>}
+          </Box>
+
         </Box>
         <Button variant="contained" type="submit" fullWidth onClick={isLogin ? login : saveUser} sx={{ marginBottom: 2 }} >
           {isLogin ? 'Login' : 'Sing Up'}
