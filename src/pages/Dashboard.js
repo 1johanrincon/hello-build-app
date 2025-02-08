@@ -46,6 +46,10 @@ const Dashboard = () => {
           {'Created At'}
         </strong>
       ),
+      valueFormatter: (row) => {
+        const date = new Date(row);
+        return date.toISOString().split('T')[0];
+      },
       width: 150,
       editable: true,
     },
@@ -116,12 +120,12 @@ const Dashboard = () => {
     }
   }, [starRepos])
 
-  
+
 
   const getGitHubData = async (code) => {
     try {
       const data = await getGitHubToken(code)
-      if(!data){
+      if (!data) {
         navigate("/")
       }
       setIsToken(true);
@@ -131,7 +135,7 @@ const Dashboard = () => {
       if (starLocal?.length > 0) {
         setStarRepos(starLocal)
       }
-      const finalResult = repositories.filter(repo => !starLocal.some(star => star.name === repo.name));
+      const finalResult = repositories.filter(repo => !starLocal?.some(star => star.name === repo.name));
       setOriginalRepos(finalResult)
       setRepos(finalResult)
       setGitHubUser({ 'name': data.data.viewer.name, 'avatar': data.data.viewer.avatarUrl })
@@ -146,11 +150,12 @@ const Dashboard = () => {
   }
 
   const filterRepos = (query) => {
-    if(query === ''){
-      setRepos(originalRepos);
+    if (query === '') {
+      const finalResult = originalRepos.filter(repo => !starRepos?.some(star => star.name === repo.name));
+      setRepos(finalResult);
       return;
     }
-    const filter = repos.filter(r => r?.name.toLowerCase().includes(query.toLowerCase())); 
+    const filter = repos.filter(r => r?.name.toLowerCase().includes(query.toLowerCase()));
     setRepos(filter)
   }
 
@@ -168,7 +173,7 @@ const Dashboard = () => {
           </Button>
         </Box>
       }
-      {repos.length > 0 &&
+      {isToken &&
         <Box sx={{ minHeight: '90vh', width: '100%' }}>
           <Box sx={{ paddingTop: 2, paddingBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant='h4' align='left' sx={{ color: 'white' }}>
