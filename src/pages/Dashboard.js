@@ -119,9 +119,7 @@ const Dashboard = () => {
   }, [])
 
   useEffect(() => {
-    if (starRepos?.length > 0) {
       localStorage.setItem('favourites', JSON.stringify(starRepos))
-    }
   }, [starRepos])
 
 
