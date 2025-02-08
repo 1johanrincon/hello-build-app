@@ -81,6 +81,10 @@ const Dashboard = () => {
         const deleteFavourite = () => {
           row.isFavourite = false;
           setStarRepos((prev) => prev.filter(r => r.name !== row.name))
+          const exist = originalRepos.some(orig => orig.name === row.name)
+          if(!exist){
+            setOriginalRepos((prev) => [row, ...prev]);
+          }
           setRepos((prev) => [row, ...prev])
         }
         return (
