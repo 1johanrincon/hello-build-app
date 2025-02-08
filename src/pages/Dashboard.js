@@ -50,8 +50,7 @@ const Dashboard = () => {
         const date = new Date(row);
         return date.toISOString().split('T')[0];
       },
-      width: 150,
-      editable: true,
+      width: 150
     },
     {
       field: 'url',
