@@ -1,14 +1,97 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Container } from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
+import { Button, Container, Box, Typography, TextField, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import { Star } from '@mui/icons-material';
+import { v4 as uuidv4 } from 'uuid';
+import { getGitHubToken } from '../services/dashboar-service'
+
 
 const Dashboard = () => {
-  const CLIENT_ID = 'Iv23libLjbUMr9U3Eul0'
-  const SECRET_ID = '23db870ea8a87d0d1a821dc2f215ef27a14e26d1'
-  const REDIRECT_URL = 'http://localhost:3000/dashboard'
+  const CLIENT_ID = process.env.REACT_APP_CLIENT_ID;
   const [repos, setRepos] = useState([]);
-  const [error, setError] = useState('');
-  const navigate = useNavigate()
+  const [originalRepos, setOriginalRepos] = useState([]);
+  const [starRepos, setStarRepos] = useState([]);
+  const [isToken, setIsToken] = useState(false);
+  const [gitHubUser, setGitHubUser] = useState({});
+  const navigate = useNavigate();
+
+  const columns = [
+    {
+      field: 'name',
+      renderHeader: () => (
+        <strong>
+          {'Name'}
+        </strong>
+      )
+      , width: 200,
+      headerAlign: "center"
+    },
+    {
+      field: 'description',
+      renderHeader: () => (
+        <strong>
+          {'Description'}
+        </strong>
+      ),
+      headerAlign: "center",
+      width: 250,
+    },
+    {
+      field: 'createdAt',
+      headerAlign: "center",
+      renderHeader: () => (
+        <strong>
+          {'Created At'}
+        </strong>
+      ),
+      width: 150,
+      editable: true,
+    },
+    {
+      field: 'url',
+      renderHeader: () => (
+        <strong>
+          {'Url'}
+        </strong>
+      ),
+      headerAlign: "center",
+      width: 400,
+    },
+    {
+      field: 'isFavourite',
+      renderHeader: () => (
+        <strong>
+          {'Favourite'}
+        </strong>
+      ),
+      headerAlign: "center",
+      width: 200,
+      renderCell: ({ row }) => {
+        const addFavourite = () => {
+          row.isFavourite = true;
+          setStarRepos((prev) => [row, ...prev])
+          setRepos((prev) => prev.filter(r => r.name !== row.name))
+        };
+        const deleteFavourite = () => {
+          row.isFavourite = false;
+          setStarRepos((prev) => prev.filter(r => r.name !== row.name))
+          setRepos((prev) => [row, ...prev])
+        }
+        return (
+          <Button
+            variant="contained"
+            endIcon={<Star />}
+            sx={{ backgroundColor: row.isFavourite ? 'red' : 'green', borderRadius: '20px' }}
+            onClick={row.isFavourite ? deleteFavourite : addFavourite}
+          >
+            {row.isFavourite ? 'Delete Favourite' : 'Add Favourite'}
+          </Button>
+        )
+      }
+    }
+  ];
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -18,108 +101,40 @@ const Dashboard = () => {
     if (!user) {
       navigate("/")
     }
-
+    const favouritesRepos = JSON.parse(localStorage.getItem('favourites'));
+    if (favouritesRepos?.length > 0) {
+      setStarRepos(favouritesRepos)
+    }
     if (code) {
-      getGitHubToken(code);
+      getGitHubData(code);
     }
   }, [])
 
-  const getGitHubToken = async (code) => {
-    try {
-      const response = await fetch('/login/oauth/access_token', {
-        method: 'POST',
-        body: JSON.stringify({
-          client_id: CLIENT_ID,
-          client_secret: SECRET_ID,
-          code,
-          redirect_uri: REDIRECT_URL,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      console.log(response)
-
-      const responseText = await response.text();
-      console.log(responseText)
-      const urlParams = new URLSearchParams(responseText);
-      const accessToken = urlParams.get('access_token');
-      console.log(accessToken);
-      localStorage.setItem('github_token', accessToken);
-      getDataUser()
-    } catch (error) {
-      console.error('Error al obtener el token:', error);
+  useEffect(() => {
+    if (starRepos?.length > 0) {
+      localStorage.setItem('favourites', JSON.stringify(starRepos))
     }
-  };
+  }, [starRepos])
 
-  const getDataUser = async () => {
-    const query = `{
-      viewer {
-        login
-        name
-        bio
-        avatarUrl
-        location
-        email
-        company
-        websiteUrl
-        createdAt
-        updatedAt
-        repositories(first: 100) {
-          nodes {
-            name
-            description
-            url
-            createdAt
-            updatedAt
-            owner {
-              login
-            }
-          }
-        }
-        followers(first: 100) {
-          nodes {
-            login
-            avatarUrl
-          }
-        }
-        following(first: 100) {
-          nodes {
-            login
-            avatarUrl
-          }
-        }
-        starredRepositories(first: 100) {
-          nodes {
-            name
-            owner {
-              login
-            }
-            description
-            url
-          }
-        }
-      }
-    }
-    `
+  
+
+  const getGitHubData = async (code) => {
     try {
-      const response = await fetch('https://api.github.com/graphql', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('github_token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
-
-      const data = await response.json();
-
-      if (data.errors) {
-        console.log(error)
-      } else {
-        console.log(data)
+      const data = await getGitHubToken(code)
+      if(!data){
+        navigate("/")
       }
-
+      setIsToken(true);
+      const repositories = data.data.viewer.repositories.nodes;
+      repositories.map(data => data.isFavourite = false)
+      const starLocal = JSON.parse(localStorage.getItem('favourites'))
+      if (starLocal?.length > 0) {
+        setStarRepos(starLocal)
+      }
+      const finalResult = repositories.filter(repo => !starLocal.some(star => star.name === repo.name));
+      setOriginalRepos(finalResult)
+      setRepos(finalResult)
+      setGitHubUser({ 'name': data.data.viewer.name, 'avatar': data.data.viewer.avatarUrl })
     } catch (error) {
       console.log(error)
     }
@@ -130,12 +145,82 @@ const Dashboard = () => {
     window.location.assign('https://github.com/login/oauth/authorize?client_id=' + CLIENT_ID)
   }
 
+  const filterRepos = (query) => {
+    if(query === ''){
+      setRepos(originalRepos);
+      return;
+    }
+    const filter = repos.filter(r => r?.name.toLowerCase().includes(query.toLowerCase())); 
+    setRepos(filter)
+  }
 
   return (
-    <Container maxWidth="lg" sx={{ paddingTop: 4 }}>
-      <Button variant="contained" onClick={loginGitHub} sx={{ textAlign: 'start' }} >
-        Link To GitHub
-      </Button>
+    <Container maxWidth="lg" sx={{ paddingTop: 2 }}>
+      {!isToken &&
+        <Box sx={{ textAlign: 'center', paddingTop: 40 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<GitHubIcon />}
+            onClick={loginGitHub}
+          >
+            Link GitHub account
+          </Button>
+        </Box>
+      }
+      {repos.length > 0 &&
+        <Box sx={{ minHeight: '90vh', width: '100%' }}>
+          <Box sx={{ paddingTop: 2, paddingBottom: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant='h4' align='left' sx={{ color: 'white' }}>
+              Welcome {gitHubUser?.name}!
+            </Typography>
+            <Box
+              sx={{
+                width: 100,
+                height: 100,
+                backgroundImage: `url(${gitHubUser?.avatar})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                borderRadius: 15,
+              }}
+            />
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Paper sx={{ width: '50%', display: 'inline-block' }}>
+              <TextField placeholder='Search' type='text' sx={{ width: '100%', borderRadius: 10 }} onChange={(e) => filterRepos(e.target.value)} />
+            </Paper>
+          </Box>
+          <Box sx={{ paddingTop: 2, paddingBottom: 1 }}>
+            <Typography variant='h6' align='left' sx={{ alignItems: 'center', color: 'white' }} >
+              Repositories
+            </Typography>
+          </Box>
+          <DataGrid
+            getRowId={() => uuidv4()}
+            rows={repos}
+            columns={columns}
+            disableRowSelectionOnClick
+            sx={{ backgroundColor: 'white', width: '100%' }}
+            hideFooterPagination={true}
+            pagination={false}
+          />
+          <Box sx={{ paddingTop: 2, paddingBottom: 1 }}>
+            <Typography variant='h6' align='left' sx={{ alignItems: 'center', color: 'white' }} >
+              Favourite Repositories
+            </Typography>
+          </Box>
+          <DataGrid
+            getRowId={() => uuidv4()}
+            rows={starRepos}
+            columns={columns}
+            disableRowSelectionOnClick
+            sx={{ backgroundColor: 'white', width: '100%' }}
+            hideFooterPagination={true}
+            pagination={false}
+            localeText={{ noRowsLabel: "You don't have favourite repositories, try adding one. " }}
+          />
+        </Box>
+      }
     </Container>
   );
 };
