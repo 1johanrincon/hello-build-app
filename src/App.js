@@ -1,35 +1,24 @@
 import "./App.css";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import React, { useState } from "react";
-import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
-
-  const handleSignUp = () => {
-    alert("User signed up successfully!");
-  };
-
-  const handleLogin = () => {
-    setLoggedIn(true);
-  };
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <div>
-          {!loggedIn ? (
-            <>
-              <SignUp onSignUp={handleSignUp} />
-              <Login onLogin={handleLogin} />
-            </>
-          ) : (
-            <Dashboard />
-          )}
-        </div>
-      </header>
-    </div>
+    <>
+      <div className="App">
+        <header className="App-header">
+          <Router>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Routes>
+          </Router>
+        </header>
+      </div>
+
+    </>
   );
 }
 

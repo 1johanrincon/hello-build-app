@@ -1,53 +1,142 @@
 import React, { useEffect, useState } from 'react';
+import { Button, Container } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const CLIENT_ID = 'Iv23libLjbUMr9U3Eul0'
+  const SECRET_ID = '23db870ea8a87d0d1a821dc2f215ef27a14e26d1'
+  const REDIRECT_URL = 'http://localhost:3000/dashboard'
   const [repos, setRepos] = useState([]);
   const [error, setError] = useState('');
+  const navigate = useNavigate()
 
-//   useEffect(() => {
-//     const token = localStorage.getItem('github_token'); // Asegúrate de guardar el token de GitHub al hacer login con OAuth
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
 
-//     if (!token) {
-//       setError('You must log in to see repositories.');
-//       return;
-//     }
+    if (!user) {
+      navigate("/")
+    }
 
-//     const fetchRepos = async () => {
-//       try {
-//         const response = await fetch('https://api.github.com/user/repos', {
-//           headers: {
-//             Authorization: `Bearer ${token}`,
-//           },
-//         });
+    if (code) {
+      getGitHubToken(code);
+    }
+  }, [])
 
-//         if (response.ok) {
-//           const data = await response.json();
-//           setRepos(data);
-//         } else {
-//           setError('Failed to fetch repositories');
-//         }
-//       } catch (err) {
-//         setError('An error occurred');
-//       }
-//     };
+  const getGitHubToken = async (code) => {
+    try {
+      const response = await fetch('/login/oauth/access_token', {
+        method: 'POST',
+        body: JSON.stringify({
+          client_id: CLIENT_ID,
+          client_secret: SECRET_ID,
+          code,
+          redirect_uri: REDIRECT_URL,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log(response)
 
-//     fetchRepos();
-//   }, []);
+      const responseText = await response.text();
+      console.log(responseText)
+      const urlParams = new URLSearchParams(responseText);
+      const accessToken = urlParams.get('access_token');
+      console.log(accessToken);
+      localStorage.setItem('github_token', accessToken);
+      getDataUser()
+    } catch (error) {
+      console.error('Error al obtener el token:', error);
+    }
+  };
+
+  const getDataUser = async () => {
+    const query = `{
+      viewer {
+        login
+        name
+        bio
+        avatarUrl
+        location
+        email
+        company
+        websiteUrl
+        createdAt
+        updatedAt
+        repositories(first: 100) {
+          nodes {
+            name
+            description
+            url
+            createdAt
+            updatedAt
+            owner {
+              login
+            }
+          }
+        }
+        followers(first: 100) {
+          nodes {
+            login
+            avatarUrl
+          }
+        }
+        following(first: 100) {
+          nodes {
+            login
+            avatarUrl
+          }
+        }
+        starredRepositories(first: 100) {
+          nodes {
+            name
+            owner {
+              login
+            }
+            description
+            url
+          }
+        }
+      }
+    }
+    `
+    try {
+      const response = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('github_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+
+      const data = await response.json();
+
+      if (data.errors) {
+        console.log(error)
+      } else {
+        console.log(data)
+      }
+
+    } catch (error) {
+      console.log(error)
+    }
+  };
+
+
+  const loginGitHub = () => {
+    window.location.assign('https://github.com/login/oauth/authorize?client_id=' + CLIENT_ID)
+  }
+
 
   return (
-    <div>
-      <h2>Your Repositories</h2>
-      {/* {error && <p style={{ color: 'red' }}>{error}</p>}
-      <ul>
-        {repos.map((repo) => (
-          <li key={repo.id}>
-            <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
-              {repo.name}
-            </a>
-          </li>
-        ))}
-      </ul> */}
-    </div>
+    <Container maxWidth="lg" sx={{ paddingTop: 4 }}>
+      <Button variant="contained" onClick={loginGitHub} sx={{ textAlign: 'start' }} >
+        Link GitHub
+      </Button>
+    </Container>
   );
 };
 
