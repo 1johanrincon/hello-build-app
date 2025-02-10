@@ -9,6 +9,7 @@ git clone https://github.com/1johanrincon/hello-build-app
 ## Navega al directorio del proyecto y ejecuta:
 
 cd hello-build-app
+
 npm install
 
 ##  3. Inicia la aplicación
